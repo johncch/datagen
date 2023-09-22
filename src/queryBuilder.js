@@ -1,9 +1,20 @@
-export function createQueryBuilder(role, prompt) {
+export function createQueryBuilder(role, format, prompt) {
+
+  function formSystemPrompt(role, format) {
+    let initialContent = "";
+    if (role) {
+      initialContent += `${role}\n`
+    }
+    if (format) {
+      initialContent += `${format}\n`
+    }
+    return initialContent;
+  }
 
   const messages = [
     {
       role: "system",
-      content: role,
+      content: formSystemPrompt(role, format),
     },
     {
       role: "user",
