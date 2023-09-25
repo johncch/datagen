@@ -7,7 +7,7 @@ function createOpenAIEngine() {
 
   const model = "gpt-3.5-turbo"
 
-  async function execute(messages) {
+  async function execute(messages, stats) {
     const promise = new Promise(async (resolve, reject) => {
       const chat_completion = await openai.chat.completions.create(
         {
@@ -16,6 +16,8 @@ function createOpenAIEngine() {
         }
       );
 
+      stats.in += chat_completion.usage.prompt_tokens;
+      stats.out += chat_completion.usage.completion_tokens;
       const choices = chat_completion.choices;
       if (choices.length <= 0) {
         reject("No responses from OpenAI");

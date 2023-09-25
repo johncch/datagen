@@ -3,8 +3,8 @@ import { createQueryBuilder } from './queryBuilder.js';
 import { OpenAIEngine } from './openai.js';
 import { parseRole } from './role.js';
 import { readInputFile } from './file.js';
-import fs from "fs/promises"
-
+import fs from "fs/promises";
+import chalk from 'chalk';
 
 program
   .option("-r, --role <role>", "Role of the agent", "default")
@@ -18,6 +18,7 @@ program
 
 program.parse();
 
+console.log(`${chalk.blue("==>")} ${chalk.whiteBright.bold("Starting datagen")}`)
 const options = program.opts();
 
 let configFile = {};
@@ -29,20 +30,27 @@ options.roles = configFile.roles ?? await parseRole(options.role);
 options.format = configFile.format ?? options.format;
 options.prompt = configFile.prompt ?? options.prompt;
 options.number = Math.max(parseInt(configFile.number ?? options.number) ?? 1, 1);
-options.verbose && console.log(`Options: ${JSON.stringify(options)}`);
+if (options.verbose) {
+  console.log(`${chalk.yellow("==>")} ${chalk.whiteBright.bold("Options")}:`)
+  console.log(`${JSON.stringify(options, null, 2)}`);
+  console.log();
+}
 
 let builder = createQueryBuilder(options.roles, options.format, options.prompt);
 
 const requests = [];
 const ongoingRequests = [];
+const stats = { in: 0, out: 0 };
 for (let idx = 1; idx <= options.number; idx++) {
   const p = new Promise(async (resolve) => {
-    options.verbose && console.log(`Starting iteration ${idx}`);
+    if (options.verbose) {
+      console.log(`${chalk.yellow("==>")} ${chalk.whiteBright.bold(`Starting iteration ${idx}`)}`)
+    }
     const messages = builder.compile();
     let reply = {};
     if (!options.dryRun) {
       try {
-        reply = await OpenAIEngine.execute(messages)
+        reply = await OpenAIEngine.execute(messages, stats)
       } catch (e) {
         reject();
       }
@@ -57,7 +65,7 @@ for (let idx = 1; idx <= options.number; idx++) {
       const fileParts = output.split(".");
       let filename = fileParts.slice(0, fileParts.length - 1).join(".");
       if (options.number > 1) {
-        filename += `-${idx}`;
+        filename += `- ${idx}`;
       }
       filename += "." + fileParts[fileParts.length - 1]
       if (!options.dryRun) {
@@ -67,7 +75,9 @@ for (let idx = 1; idx <= options.number; idx++) {
       }
     } else {
       if (!options.dryRun) {
-        console.log(reply.content);
+        console.log();
+        console.log(`${chalk.blue("==>")} ${chalk.whiteBright.bold(`Output for iteration ${idx}`)}:`)
+        console.log(reply);
       }
     }
     resolve();
@@ -80,4 +90,9 @@ for (let idx = 1; idx <= options.number; idx++) {
   }
 }
 
-Promise.all(requests).then(() => console.log("Done"))
+Promise.all(requests).then(() => {
+  console.log();
+  console.log(`${chalk.blue("==>")} ${chalk.whiteBright.bold("Completion")}:`)
+  console.log(`Input tokens: ${stats.in} `)
+  console.log(`Output tokens: ${stats.out} `)
+})
