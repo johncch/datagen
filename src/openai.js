@@ -7,9 +7,8 @@ function createOpenAIEngine() {
 
   const model = "gpt-3.5-turbo"
 
-  async function execute(builder) {
+  async function execute(messages) {
     const promise = new Promise(async (resolve, reject) => {
-      const messages = builder.getMessages();
       const chat_completion = await openai.chat.completions.create(
         {
           model,
@@ -17,16 +16,29 @@ function createOpenAIEngine() {
         }
       );
 
-      const reply =
-        chat_completion.choices[0].message?.content ?? "{ error: 'no reply' }";
-      builder.addMessage("assistant", reply);
-      resolve(builder);
+      const choices = chat_completion.choices;
+      if (choices.length <= 0) {
+        reject("No responses from OpenAI");
+        return;
+      }
+
+      const firstMessage = choices[0];
+      if (firstMessage.finish_reason === "stop") {
+        resolve(firstMessage.message.content)
+      } else {
+        reject(firstMessage.finish_reason)
+      }
     })
     return promise
   }
 
+  function engine() {
+    return `OpenAI: ${model}`
+  }
+
   return {
     execute,
+    engine,
   }
 }
 

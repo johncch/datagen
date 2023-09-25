@@ -1,21 +1,19 @@
-export function createQueryBuilder(role, format, prompt) {
-
-  function formSystemPrompt(role, format) {
-    let initialContent = "";
-    if (role) {
-      initialContent += `${role}\n`
-    }
-    if (format) {
-      initialContent += `${format}\n`
-    }
-    return initialContent;
+function formSystemPrompt(role, format) {
+  let initialContent = "";
+  if (Array.isArray(role)) {
+    const randomInt = Math.floor(Math.random() * role.length);
+    initialContent += `${role[randomInt]}\n`
+  } else if (typeof role === "string") {
+    initialContent += `${role}\n`
   }
+  if (format) {
+    initialContent += `${format}\n`
+  }
+  return initialContent;
+}
 
+export function createQueryBuilder(roles, format, prompt) {
   const messages = [
-    {
-      role: "system",
-      content: formSystemPrompt(role, format),
-    },
     {
       role: "user",
       content: prompt,
@@ -33,13 +31,19 @@ export function createQueryBuilder(role, format, prompt) {
     return messages[messages.length - 1]
   }
 
-  function getMessages() {
-    return messages
+  function compile() {
+    return [
+      {
+        role: "system",
+        content: formSystemPrompt(roles, format)
+      },
+      ...messages
+    ]
   }
 
   return {
     addMessage,
     getLast,
-    getMessages,
+    compile,
   }
 }

@@ -1,13 +1,16 @@
 import * as fs from 'fs/promises';
 
-let roles = null;
+let defaultRoles = null;
 
-export async function getRole(role) {
-  if (roles) {
-    return roles[role]
+export async function parseRole(role) {
+  if (!defaultRoles) {
+    const file = await fs.readFile("./presets/roles.json");
+    defaultRoles = JSON.parse(file);
   }
 
-  const file = await fs.readFile("./presets/roles.json");
-  roles = JSON.parse(file);
-  return roles[role]
+  const defaultRolesKey = Object.keys(defaultRoles);
+  if (defaultRolesKey.includes(role)) {
+    return defaultRoles[role];
+  }
+  return role;
 }
